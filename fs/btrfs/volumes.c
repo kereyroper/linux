@@ -6185,22 +6185,30 @@ static int read_one_dev(struct btrfs_root *root,
 
 	if (memcmp(fs_uuid, root->fs_info->fsid, BTRFS_UUID_SIZE)) {
 		fs_devices = open_seed_devices(root, fs_uuid);
-		if (IS_ERR(fs_devices))
+		if (IS_ERR(fs_devices)) {
+			printk(KERN_ERR "BTRFS: open_seed_devices failed");
 			return PTR_ERR(fs_devices);
+		}
 	}
 
 	device = btrfs_find_device(root->fs_info, devid, dev_uuid, fs_uuid);
 	if (!device) {
-		if (!btrfs_test_opt(root, DEGRADED))
+		if (!btrfs_test_opt(root, DEGRADED)) {
+			printk(KERN_ERR "BTRFS: device missing but not degraded");
 			return -EIO;
+		}
 
 		btrfs_warn(root->fs_info, "devid %llu missing", devid);
 		device = add_missing_dev(root, fs_devices, devid, dev_uuid);
-		if (!device)
+		if (!device) {
+			printk(KERN_ERR "BTRFS: device missing failed");
 			return -ENOMEM;
+		}
 	} else {
-		if (!device->bdev && !btrfs_test_opt(root, DEGRADED))
+		if (!device->bdev && !btrfs_test_opt(root, DEGRADED)) {
+			printk(KERN_ERR "BTRFS: bdev missing but not degraded");
 			return -EIO;
+		}
 
 		if(!device->bdev && !device->missing) {
 			/*
@@ -6231,8 +6239,10 @@ static int read_one_dev(struct btrfs_root *root,
 	if (device->fs_devices != root->fs_info->fs_devices) {
 		BUG_ON(device->writeable);
 		if (device->generation !=
-		    btrfs_device_generation(leaf, dev_item))
+		    btrfs_device_generation(leaf, dev_item)) {
+			printk(KERN_ERR "BTRFS: device generation mismatch");
 			return -EINVAL;
+		}
 	}
 
 	fill_device_from_item(leaf, dev_item, device);
